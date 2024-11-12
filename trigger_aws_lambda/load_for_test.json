@@ -1,0 +1,5 @@
+{
+    "name": "zoom",
+    "meeting_id": "123-456-789",
+    "host_access_token": "example_host_access_token"
+}

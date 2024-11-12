@@ -32,13 +32,13 @@ def lambda_handler(event, context):
 
     try:
         body = json.loads(event['body'])
-        provider = body['provider']
+        provider = body['name']
         meeting_id = body['meeting_id']
-        meeting_link = body['meeting_link']
+        host_access_token = body['host_access_token']
 
-        logger.info(f"Provider: {provider}")
+        logger.info(f"Provider Name: {provider}")
         logger.info(f"Meeting ID: {meeting_id}")
-        logger.info(f"Meeting Link: {meeting_link}")
+        logger.info(f"Host Access Token: {host_access_token}")
         
     except (KeyError, TypeError, json.JSONDecodeError) as e:
         error_message = f"Invalid or missing parameters: {str(e)}"
@@ -51,7 +51,7 @@ def lambda_handler(event, context):
     environment_variables = [
         {'name': 'PROVIDER', 'value': provider},
         {'name': 'MEETING_ID', 'value': meeting_id},
-        {'name': 'MEETING_LINK', 'value': meeting_link}
+        {'name': 'HOST_ACCESS_TOKEN', 'value': host_access_token}
     ]
 
     try:

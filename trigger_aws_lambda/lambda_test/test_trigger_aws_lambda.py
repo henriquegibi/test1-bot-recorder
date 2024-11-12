@@ -14,9 +14,9 @@ class TestLambdaFunction(unittest.TestCase):
         
         self.event = {
             'body': json.dumps({
-                'provider': 'zoom',
+                'name': 'zoom',
                 'meeting_id': '123-456-789',
-                'meeting_link': 'https://zoom.us/j/123456789'
+                'host_access_token': 'example_host_access_token'
             })
         }
 
@@ -47,7 +47,7 @@ class TestLambdaFunction(unittest.TestCase):
     def test_missing_parameters_in_json_body(self, mock_boto_client):
         event = {
             'body': json.dumps({
-                'provider': 'zoom',
+                'name': 'zoom',
                 'meeting_id': '123-456-789'
             })
         }

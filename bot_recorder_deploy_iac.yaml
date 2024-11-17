@@ -1,0 +1,99 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Resources:
+  BotRecorderEFS:
+    Type: AWS::EFS::FileSystem
+    Properties:
+      Encrypted: true
+
+  BotSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow EFS and SSH
+      VpcId: <YOUR_VPC_ID>
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 2049
+          ToPort: 2049
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+
+  BotEC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: m5.xlarge
+      ImageId: ami-<AMAZON_LINUX_2_AMI>
+      SecurityGroupIds:
+        - !Ref BotSecurityGroup
+      SubnetId: <YOUR_SUBNET_ID>
+      FileSystems:
+        - DeviceName: /dev/xvdf
+          FileSystemId: !Ref BotRecorderEFS
+          MountPoint: /mnt/efs
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          yum update -y
+          yum install -y git
+          yum install -y amazon-efs-utils
+          mount -t efs -o tls ${BotRecorderEFS}:/ /mnt/efs
+          git clone <repositorio>
+          cd <repositorio>
+          ./start_bot.sh  # Executa o bot
+
+  AutoScalingLaunchConfiguration:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      ImageId: ami-<AMAZON_LINUX_2_AMI>
+      InstanceType: m5.xlarge
+      SecurityGroups:
+        - !Ref BotSecurityGroup
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          mount -t efs -o tls ${BotRecorderEFS}:/ /mnt/efs
+          cd /mnt/efs/bot  # Diretório do repositório clonado
+          ./start_bot.sh
+
+  MyAutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      LaunchConfigurationName: !Ref AutoScalingLaunchConfiguration
+      MinSize: 2
+      MaxSize: 10
+      VPCZoneIdentifier:
+        - <YOUR_SUBNET_ID>
+      TargetGroupARNs:
+        - !Ref LoadBalancerTargetGroup
+
+  EFSMountTargetA:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId: !Ref BotRecorderEFS
+      SubnetId: <YOUR_SUBNET_ID>
+      SecurityGroups:
+        - !Ref BotSecurityGroup
+
+  EFSMountTargetB:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId: !Ref BotRecorderEFS
+      SubnetId: <ANOTHER_SUBNET_ID>
+      SecurityGroups:
+        - !Ref BotSecurityGroup
+
+  LoadBalancerTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: BotTargetGroup
+      Protocol: HTTP
+      Port: 80
+      VpcId: <YOUR_VPC_ID>
+      TargetType: instance
+
+Outputs:
+  EFSArn:
+    Description: "The ARN of the EFS"
+    Value: !GetAtt BotRecorderEFS.Arn

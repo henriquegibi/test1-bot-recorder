@@ -3,5 +3,3 @@
 trigger_aws_lambda/venv/
 trigger_aws_lambda/lambda_test/__pycache__/
 trigger_aws_lambda/lambda_trigger/__pycache__/
-
-app_bot_fargate/.idea/

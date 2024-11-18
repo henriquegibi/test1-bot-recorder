@@ -6,18 +6,20 @@ This project implements a bot system to record meetings across platforms `Teams`
 ![AWS Architecture](images\aws-bot-recorder-drawio.png)
 
 ## Implementation
+- Whenever you want to update the AWS Lambda, you must _zip_ the `lambda_handler.py` file and upload it to the S3 Bucket:
+  - with this step, the [Cloudformation](bot_recorder_deploy_iac.yaml) file will be able to deploy the lambda automatically
 
 ## Test Coverage
 
 ### AWS Lambda Test Coverage
 
-Below are the test coverage results generated on 2024-11-11 20:08 -0300 using `coverage.py v7.2.7`.
+Below are the test coverage results generated on 2024-11-17 22:45 -0300 using `coverage.py v7.2.7`.
 
 | Module                                       | Statements | Missing | Excluded | Coverage |
 |----------------------------------------------|------------|---------|----------|----------|
-| `test_lambda_handler\test_lambda_handler.py` | 64         | 1       | 0        | 98%      |
-| `lambda_handler\lambda_handler.py`           | 45         | 0       | 0        | 100%     |
-| **Total**                                    | 111        | 1       | 0        | 99%      |
+| `test_lambda_handler\test_lambda_handler.py` | 45         | 5       | 0        | 89%      |
+| `lambda_handler\lambda_handler.py`           | 42         | 1       | 0        |  98%     |
+| **Total**                                    | 87         | 6       | 0        | 93%      |
 
 #### Details
 

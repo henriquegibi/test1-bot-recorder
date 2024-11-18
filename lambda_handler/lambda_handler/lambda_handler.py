@@ -3,10 +3,15 @@ import boto3
 import os
 import logging
 import uuid
+import time
 from datetime import datetime
+from botocore.exceptions import ClientError
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
+
+RETRY_COUNT = 3
+RETRY_DELAY = 2
 
 def lambda_handler(event, context):
     execution_id = str(uuid.uuid4())
@@ -54,39 +59,46 @@ def lambda_handler(event, context):
         {'name': 'HOST_ACCESS_TOKEN', 'value': host_access_token}
     ]
 
-    try:
-        logger.info("Starting Fargate task...")
-        response = ecs_client.run_task(
-            cluster=cluster_name,
-            launchType='FARGATE',
-            taskDefinition=task_definition,
-            networkConfiguration={
-                'awsvpcConfiguration': {
-                    'subnets': [subnet_id],
-                    'securityGroups': [security_group_id],
-                    'assignPublicIp': 'ENABLED'
+    attempt = 0
+    while attempt < RETRY_COUNT:
+        try:
+            logger.info(f"Starting EC2 Bot (Attempt {attempt + 1})...")
+            response = ecs_client.run_task(
+                cluster=cluster_name,
+                launchType='EC2',
+                taskDefinition=task_definition,
+                networkConfiguration={
+                    'awsvpcConfiguration': {
+                        'subnets': [subnet_id],
+                        'securityGroups': [security_group_id],
+                        'assignPublicIp': 'ENABLED'
+                    }
+                },
+                overrides={
+                    'containerOverrides': [{
+                        'name': 'bot-container',
+                        'environment': environment_variables
+                    }]
                 }
-            },
-            overrides={
-                'containerOverrides': [{
-                    'name': 'bot-container',
-                    'environment': environment_variables
-                }]
+            )
+            task_arn = response['tasks'][0]['taskArn']
+            logger.info(f"EC2 Bot started successfully. Task ARN: {task_arn}")
+            return {
+                "statusCode": 200,
+                "body": json.dumps({
+                    "message": "EC2 Bot started successfully.",
+                    "taskArn": task_arn
+                })
             }
-        )
-        task_arn = response['tasks'][0]['taskArn']
-        logger.info(f"Fargate task started successfully. Task ARN: {task_arn}")
-        return {
-            "statusCode": 200,
-            "body": json.dumps({
-                "message": "Fargate task started successfully.",
-                "taskArn": task_arn
-            })
-        }
-    except Exception as e:
-        error_message = f"Error starting Fargate task: {str(e)}"
-        logger.error(error_message)
-        return {
-            "statusCode": 500,
-            "body": json.dumps({"error": error_message})
-        }
+        except ClientError as e:
+            logger.warning(f"Attempt {attempt + 1} failed: {e}")
+            attempt += 1
+            if attempt < RETRY_COUNT:
+                time.sleep(RETRY_DELAY)
+
+    error_message = "Error starting EC2 Bot after multiple attempts."
+    logger.error(error_message)
+    return {
+        "statusCode": 500,
+        "body": json.dumps({"error": error_message})
+    }

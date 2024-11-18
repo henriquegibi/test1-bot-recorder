@@ -13,22 +13,22 @@ This project implements a bot system to record meetings across platforms `Teams`
 
 Below are the test coverage results generated on 2024-11-11 20:08 -0300 using `coverage.py v7.2.7`.
 
-| Module                                   | Statements | Missing | Excluded | Coverage |
-|------------------------------------------|------------|---------|----------|----------|
-| `lambda_test\test_trigger_aws_lambda.py` | 64         | 1       | 0        | 98%      |
-| `lambda_trigger\trigger_aws_lambda.py`   | 45         | 0       | 0        | 100%     |
-| **Total**                                | 111        | 1       | 0        | 99%      |
+| Module                                       | Statements | Missing | Excluded | Coverage |
+|----------------------------------------------|------------|---------|----------|----------|
+| `test_lambda_handler\test_lambda_handler.py` | 64         | 1       | 0        | 98%      |
+| `lambda_handler\lambda_handler.py`           | 45         | 0       | 0        | 100%     |
+| **Total**                                    | 111        | 1       | 0        | 99%      |
 
 #### Details
 
-- **Cobertura Total**: 99%
-- The full HTML report can be viewed at [`htmlcov/index.html`](trigger_aws_lambda/htmlcov/index.html).
+- **Total Coverage**: 99%
+- The full HTML report can be viewed at [`htmlcov/index.html`](lambda_handler\htmlcov\index.html).
 
 #### Viewing the Coverage Report
 
-For a detailed analysis of code coverage, you can open the generated HTML report. It is located at `trigger_aws_lambda/htmlcov/index.html` and can be opened in any browser.
+For a detailed analysis of code coverage, you can open the generated HTML report. It is located at `lambda_handler\htmlcov\index.html` and can be opened in any browser.
 
-### AWS Fargate Test Coverage
+### AWS Bot Recorder Test Coverage
 
 #### Details
 

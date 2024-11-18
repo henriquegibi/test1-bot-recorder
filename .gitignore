@@ -1,5 +1,9 @@
 .vscode/
 .coverage
-trigger_aws_lambda/venv/
-trigger_aws_lambda/lambda_test/__pycache__/
-trigger_aws_lambda/lambda_trigger/__pycache__/
+lambda_handler/venv/
+lambda_handler/lambda_test/__pycache__/
+lambda_handler/lambda_trigger/__pycache__/
+app_bot/venv/
+app_bot/app_bot/__pycache__/
+app_bot/test_app_bot/__pycache__/
+app_bot/__pycache__

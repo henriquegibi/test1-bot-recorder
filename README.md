@@ -6,8 +6,24 @@ This project implements a bot system to record meetings across platforms `Teams`
 ![AWS Architecture](images\aws-bot-recorder-drawio.png)
 
 ## Implementation
+- A CI/CD pipeline would be great, but it is not available at this moment
 - Whenever you want to update the AWS Lambda, you must _zip_ the `lambda_handler.py` file and upload it to the S3 Bucket:
-  - with this step, the [Cloudformation](bot_recorder_deploy_iac.yaml) file will be able to deploy the lambda automatically
+  - arn: 
+  - within this step, the [Cloudformation](bot_recorder_deploy_iac.yaml) file will be able to deploy the lambda automatically
+    - update this file if S3 bucket's ARN changes.
+
+### Procedure to implement
+
+- Download the AMI file
+- Download the [AMI Creation](script\create_ami_from_local_image.sh) script
+- Make sure both ar at the same folder
+- Make sure you have AWS CLI running properly
+- At file/script folder, run those command below on terminal:
+```
+chmod +x create_ami_from_local_image.sh
+./create_ami_from_local_image.sh
+```
+- Use the [YAML](bot_recorder_deploy_iac.yaml) file to deploy after those intructions above
 
 ## Test Coverage
 

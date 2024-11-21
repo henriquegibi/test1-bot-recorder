@@ -32,16 +32,63 @@ Resources:
         - DeviceName: /dev/xvdf
           FileSystemId: !Ref BotRecorderEFS
           MountPoint: /mnt/efs
-      UserData:
-        Fn::Base64: !Sub |
-          #!/bin/bash
-          yum update -y
-          yum install -y git
-          yum install -y amazon-efs-utils
-          mount -t efs -o tls ${BotRecorderEFS}:/ /mnt/efs
-          git clone <repositorio>
-          cd <repositorio>
-          ./start_bot.sh  # Executa o bot
+      UserData: 
+        UserData: 
+          Fn::Base64: !Sub |
+            #!/bin/bash
+            sudo yum update -y
+            sudo yum install -y python3 pip git amazon-efs-utils awslogs
+            pip3 install boto3 requests Flask
+            sudo amazon-linux-extras install -y epel
+            sudo yum install -y ffmpeg alsa-utils
+            
+            sudo mkdir -p /mnt/efs
+            sudo mount -t efs -o tls ${BotRecorderEFS}:/ /mnt/efs
+            if [ $? -eq 0 ]; then
+                echo "EFS montado com sucesso em /mnt/efs"
+            else
+                echo "Falha ao montar EFS" >&2
+                exit 1
+            fi
+
+            sudo mkdir -p /etc/awslogs
+            sudo tee /etc/awslogs/awslogs.conf > /dev/null <<EOF
+            [general]
+            state_file = /var/lib/awslogs/agent-state
+
+            [/var/log/messages]
+            file = /var/log/messages
+            log_group_name = /bot-recorder/logs
+            log_stream_name = {instance_id}/messages
+            datetime_format = %b %d %H:%M:%S
+
+            [/var/log/cloud-init.log]
+            file = /var/log/cloud-init.log
+            log_group_name = /bot-recorder/logs
+            log_stream_name = {instance_id}/cloud-init
+            datetime_format = %Y-%m-%dT%H:%M:%S
+
+            file = /mnt/efs/app.log
+            log_group_name = /bot-recorder/app
+            log_stream_name = {instance_id}/app
+            datetime_format = %Y-%m-%d %H:%M:%S
+            EOF
+
+            sudo tee /etc/awslogs/awscli.conf > /dev/null <<EOF
+            [plugins]
+            cwlogs = cwlogs
+            [default]
+            region = ${AWS::Region}
+            EOF
+
+            sudo systemctl start awslogs
+            sudo systemctl enable awslogs
+
+            git clone <repositorio>
+            cd <repositorio>
+            chmod +x ./start_bot.sh
+            ./start_bot.sh
+
 
   AutoScalingLaunchConfiguration:
     Type: AWS::AutoScaling::LaunchConfiguration
@@ -97,3 +144,164 @@ Outputs:
   EFSArn:
     Description: "The ARN of the EFS"
     Value: !GetAtt BotRecorderEFS.Arn
+
+
+
+#####################################
+#####################################
+#####################################
+
+
+
+Resources:
+  # Cria uma VPC
+  MyVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: MyVPC
+
+  # Cria uma Internet Gateway para permitir o tráfego de entrada e saída da VPC
+  MyInternetGateway:
+    Type: AWS::EC2::InternetGateway
+  MyVPCGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref MyVPC
+      InternetGatewayId: !Ref MyInternetGateway
+
+  # Cria duas subnets públicas na VPC
+  MyPublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref MyVPC
+      CidrBlock: 10.0.1.0/24
+      AvailabilityZone: !Select [0, !GetAZs '']
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: MyPublicSubnet1
+
+  MyPublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref MyVPC
+      CidrBlock: 10.0.2.0/24
+      AvailabilityZone: !Select [1, !GetAZs '']
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: MyPublicSubnet2
+
+  # Cria um Security Group para o Load Balancer
+  MyLoadBalancerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow HTTP traffic for Load Balancer
+      VpcId: !Ref MyVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: MyLoadBalancerSecurityGroup
+
+  # Cria o Load Balancer e referencia as subnets e security groups criados
+  MyLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: my-load-balancer
+      Scheme: internet-facing
+      IpAddressType: ipv4
+      Subnets:
+        - !Ref MyPublicSubnet1
+        - !Ref MyPublicSubnet2
+      SecurityGroups:
+        - !Ref MyLoadBalancerSecurityGroup
+
+  MyTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: my-target-group
+      Port: 80
+      Protocol: HTTP
+      VpcId: !Ref MyVPC
+      HealthCheckProtocol: HTTP
+      HealthCheckPort: '80'
+      HealthCheckPath: '/'
+      TargetType: instance
+
+  MyListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref MyTargetGroup
+      LoadBalancerArn: !Ref MyLoadBalancer
+      Port: 80
+      Protocol: HTTP
+
+  # Cria um Security Group para o Auto Scaling Group
+  MyAutoScalingSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow HTTP traffic for Auto Scaling Group instances
+      VpcId: !Ref MyVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          SourceSecurityGroupId: !Ref MyLoadBalancerSecurityGroup
+      Tags:
+        - Key: Name
+          Value: MyAutoScalingSecurityGroup
+
+  # Cria o Auto Scaling Group e referencia as subnets e security group criados
+  MyAutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AutoScalingGroupName: my-auto-scaling-group
+      MinSize: '1'
+      MaxSize: '3'
+      DesiredCapacity: '2'
+      VPCZoneIdentifier:
+        - !Ref MyPublicSubnet1
+        - !Ref MyPublicSubnet2
+      TargetGroupARNs:
+        - !Ref MyTargetGroup
+      LaunchConfigurationName: !Ref MyLaunchConfiguration
+
+  MyLaunchConfiguration:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      ImageId: ami-xxxxxxxx # Substitua pela AMI da sua aplicação
+      InstanceType: t3.micro
+      SecurityGroups:
+        - !Ref MyAutoScalingSecurityGroup
+      UserData:
+        Fn::Base64: |
+          #!/bin/bash
+          # Comandos para iniciar sua aplicação
+
+  # Define a função Lambda
+  MyLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: my-lambda-function
+      Handler: lambda_handler.lambda_handler
+      Role: arn:aws:iam::xxxxxxxx:role/my-lambda-role # Substitua pela role da Lambda
+      Runtime: python3.8
+      Code:
+        S3Bucket: my-lambda-bucket
+        S3Key: my_lambda_code.zip
+      Environment:
+        Variables:
+          AUTO_SCALING_URL: !GetAtt MyLoadBalancer.DNSName
+      MemorySize: 128
+      Timeout: 10

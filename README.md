@@ -34,7 +34,7 @@ Below are the test coverage results generated on 2024-11-17 22:45 -0300 using `c
 | Module                                       | Statements | Missing | Excluded | Coverage |
 |----------------------------------------------|------------|---------|----------|----------|
 | `test_lambda_handler\test_lambda_handler.py` | 45         | 5       | 0        | 89%      |
-| `lambda_handler\lambda_handler.py`           | 42         | 1       | 0        |  98%     |
+| `lambda_handler\lambda_handler.py`           | 42         | 1       | 0        | 98%      |
 | **Total**                                    | 87         | 6       | 0        | 93%      |
 
 #### Details
@@ -48,9 +48,22 @@ For a detailed analysis of code coverage, you can open the generated HTML report
 
 ### AWS Bot Recorder Test Coverage
 
+Below are the test coverage results generated on 2024-11-17 22:45 -0300 using `coverage.py v7.2.7`.
+
+| Module                         | Statements | Missing | Excluded | Coverage |
+|--------------------------------|------------|---------|----------|----------|
+| `test_app_bot\test_app_bot.py` | 75         | 1       | 0        | 99%      |
+| `app_bot\app_bot.py`           | 96         | 33      | 0        | 66%      |
+| **Total**                      | 87         | 6       | 0        | 80%      |
+
 #### Details
 
+- **Total Coverage**: 99%
+- The full HTML report can be viewed at [`htmlcov/index.html`](app_bot\htmlcov\index.html).
+
 #### Viewing the Coverage Report
+
+For a detailed analysis of code coverage, you can open the generated HTML report. It is located at `app_bot\htmlcov\index.html` and can be opened in any browser.
 
 ## Budget Estimate
 
